@@ -5,7 +5,7 @@
 2) set up app/config.py 
 
 example:
-'''
+```
 HOST = "0.0.0.0"
 PORT = 8000
 
@@ -15,7 +15,7 @@ DELETION_POOLING_INTERVAL = 3600
 EXPIRATION_TIME = 3600
 BATCH_SIZE = 16
 DEVICE = "cpu"
-'''
+```
 
 3)  
 ```
