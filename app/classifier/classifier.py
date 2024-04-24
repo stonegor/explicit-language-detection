@@ -6,33 +6,40 @@ from server.database import get_unlabeled_texts, label, label_corpus
 import asyncio
 import threading
 from queue import Queue, Empty
+import torch
 
 
 class Classifier:
-    def __init__(self, model_path) -> None:
+    def __init__(self, model_path, device=None) -> None:
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = MeanPoolingElectraForSequenceClassification.from_pretrained(
             model_path
-        )
+        ).to(self.device)
 
-    def predict(self, texts: List[str]) -> np.array:
-
+    def predict(self, texts: List[str]) -> List[int]:
         texts = self.preprocess(texts)
         tokenized_text = self.tokenize(texts)
-        logits = self.model(**tokenized_text)[0]
+
+        tokenized_text = {
+            key: value.to(self.device) for key, value in tokenized_text.items()
+        }
+
+        with torch.no_grad():
+            logits = self.model(**tokenized_text)[0]
 
         labels = logits.argmax(axis=1)
 
-        return labels.detach().numpy().tolist()
+        return labels.cpu().numpy().tolist()
 
     def tokenize(self, texts: List[str]) -> Dict:
         return self.tokenizer(
             texts, return_tensors="pt", padding=True, truncation=True, max_length=512
         )
 
-    def preprocess(self, texts):
-
+    def preprocess(self, texts: List[str]) -> List[str]:
         texts = list(map(lambda x: x.strip(), texts))
         texts = list(map(lambda x: bytes(x, "utf-8").decode("utf-8", "ignore"), texts))
 
@@ -46,7 +53,7 @@ class ClassifierWorker:
         self.thread = threading.Thread(target=self.run)
         self.loop = asyncio.new_event_loop()
         self.interval = interval
-        self.clf = Classifier(model_path)
+        self.clf = Classifier(model_path, device=device)
         self.batch_size = batch_size
         self.device = device
         self.thread.daemon = True

@@ -1,6 +1,7 @@
 import unittest
 from unittest import IsolatedAsyncioTestCase
 import time
+import asyncio
 
 from server.database import (
     add_corpus,
@@ -8,7 +9,6 @@ from server.database import (
     get_unlabeled_texts,
     label,
     delete_corpus,
-    set_expiration,
 )
 
 
@@ -74,23 +74,6 @@ class TestDatabase(IsolatedAsyncioTestCase):
         await delete_corpus(id)
 
         self.assertEqual(expected, result)
-
-    """
-    async def test_set_expiration(self):
-        corpus = {"corpus": [{"text": "0"}]}
-
-        expected = None
-
-        id = (await add_corpus(corpus))["id"]
-
-        await set_expiration(id, delta=1)
-
-        result = await get_corpus(id)
-
-        time.sleep(60)
-
-        self.assertEqual(expected, result)
-    """
 
 
 if __name__ == "__main__":

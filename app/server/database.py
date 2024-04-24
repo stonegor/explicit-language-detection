@@ -1,16 +1,21 @@
 import asyncio
 import motor.motor_asyncio
 from bson.objectid import ObjectId
-from config import MONGO_DETAILS, EXPIRATION_TIME
+from config import MONGO_DETAILS, EXPIRATION_TIME, DELETION_POOLING_INTERVAL
 from typing import Dict, List
-from datetime import datetime, timedelta
-
+from datetime import datetime
+from .deletion import DeletionWorker
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 client.get_io_loop = asyncio.get_running_loop
 
 database = client.corpus
 corpus_collection = database.get_collection("corpus_collection")
+
+worker = DeletionWorker(
+    corpus_collection, delta=EXPIRATION_TIME, interval=DELETION_POOLING_INTERVAL
+)
+worker.run()
 
 
 def text_helper(text) -> dict:
@@ -120,16 +125,8 @@ async def get_unlabeled_texts(id: str, start: int, count: int) -> List[Dict]:
     return texts_list
 
 
-async def set_expiration(id: str, delta: int = EXPIRATION_TIME) -> None:
-
-    expire_at = datetime.now() + timedelta(seconds=delta)
-
-    await corpus_collection.update_one(
-        {"_id": ObjectId(id)},
-        {"$set": {"expireAt": expire_at}},
-    )
-
-
 async def label_corpus(id: str, labeled=True):
-    corpus_collection.update_one({"_id": ObjectId(id)}, {"$set": {"labeled": labeled}})
-    await set_expiration(id)
+    corpus_collection.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"labeled": labeled, "labeled_at": datetime.now()}},
+    )
