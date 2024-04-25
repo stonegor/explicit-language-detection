@@ -18,7 +18,7 @@ class DeletionWorker:
                     {"labeled_at": {"$lt": threshold_time}}
                 )
                 print(
-                    f"Deleted {result.deleted_count} datasets labeled before {threshold_time}"
+                    f"Deleted {result.deleted_count} corpuses labeled before {threshold_time}"
                 )
                 await asyncio.sleep(self.interval)
             except Exception as e:
