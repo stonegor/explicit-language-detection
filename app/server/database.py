@@ -1,7 +1,7 @@
 import asyncio
 import motor.motor_asyncio
 from bson.objectid import ObjectId
-from config import MONGO_DETAILS, EXPIRATION_TIME, DELETION_POOLING_INTERVAL
+from config import MONGO_DETAILS, EXPIRATION_TIME, DELETION_POLLING_INTERVAL
 from typing import Dict, List
 from datetime import datetime
 from .deletion import DeletionWorker
@@ -12,8 +12,10 @@ client.get_io_loop = asyncio.get_running_loop
 database = client.corpus
 corpus_collection = database.get_collection("corpus_collection")
 
+# MongoDB TTL Indexes were causing a lot of bugs and being inconsistent for some reason
+# So i decided to do this:
 worker = DeletionWorker(
-    corpus_collection, delta=EXPIRATION_TIME, interval=DELETION_POOLING_INTERVAL
+    corpus_collection, delta=EXPIRATION_TIME, interval=DELETION_POLLING_INTERVAL
 )
 worker.run()
 
